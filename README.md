@@ -17,7 +17,7 @@ enforcement.
 
 | Component | Folder | What it does |
 |-----------|--------|--------------|
-| **Android app** | `android/` | Reads the device call log, flags the silent-stranger pattern, per-call notes, charts, CSV export. (`app-source/` holds the same Kotlin as flat files for reference.) |
+| **Android app** | `android/` | Reads the device call log, flags the silent-stranger pattern, per-call notes, charts, CSV export. Open this folder in Android Studio. |
 | **Analysis pipeline** | `analysis/` | `analyze_calls.py` turns any call CSV (app export **or** carrier records, any carrier) into charts + a one-page PDF report. |
 | **Google Voice route** | `google_voice/` | Free screening number; `gvoice_to_csv.py` converts a Takeout export into the CSV the pipeline reads. |
 | **Twilio route** *(optional, ~$1/mo)* | `twilio/` | Logs each call's **STIR/SHAKEN attestation**. |
