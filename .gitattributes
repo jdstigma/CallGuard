@@ -1,0 +1,18 @@
+# Normalize line endings; store text as LF in the repo.
+* text=auto
+
+# Scripts that MUST keep specific endings:
+gradlew      text eol=lf
+*.sh         text eol=lf
+*.bat        text eol=crlf
+*.cmd        text eol=crlf
+
+# Binary files (never touch line endings):
+*.jar        binary
+*.png        binary
+*.jpg        binary
+*.jpeg       binary
+*.webp       binary
+*.pdf        binary
+*.keystore   binary
+*.jks        binary

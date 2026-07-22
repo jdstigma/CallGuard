@@ -1,0 +1,52 @@
+# =========================================================================
+#  REAL CALL DATA — never publish. These contain actual phone numbers.
+# =========================================================================
+*.csv
+*.pdf
+**/charts/
+CallGuard_evidence_*.csv
+gvoice_calls.csv
+twilio_calls.csv
+twilio_recordings.csv
+# Google Voice / Takeout exports if unzipped into the repo
+**/Takeout/
+**/Calls/
+# Any voicemail / recording audio
+*.mp3
+*.wav
+*.m4a
+
+# =========================================================================
+#  Python
+# =========================================================================
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+build/
+dist/
+*.spec
+
+# =========================================================================
+#  Android / Gradle (once the app project lives under android/)
+# =========================================================================
+.gradle/
+.kotlin/
+**/build/
+local.properties
+*.apk
+*.aab
+# Signing material — NEVER commit these
+*.keystore
+*.jks
+keystore.properties
+
+# =========================================================================
+#  IDE / OS
+# =========================================================================
+.idea/
+*.iml
+.vscode/
+Thumbs.db
+.DS_Store
