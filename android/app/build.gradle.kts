@@ -21,10 +21,29 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            // Populated from environment variables in CI (from GitHub Secrets).
+            // Absent locally, so local debug builds are unaffected.
+            val ksPath = System.getenv("KEYSTORE_FILE")
+            if (ksPath != null && file(ksPath).exists()) {
+                storeFile = file(ksPath)
+                storePassword = System.getenv("KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("KEY_ALIAS")
+                keyPassword = System.getenv("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
                 enable = false
+            }
+            // Sign only when the keystore env vars are present (CI with secrets);
+            // otherwise a plain unsigned release build.
+            if (System.getenv("KEYSTORE_FILE")?.let { file(it).exists() } == true) {
+                signingConfig = signingConfigs.getByName("release")
             }
         }
     }

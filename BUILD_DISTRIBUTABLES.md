@@ -60,6 +60,6 @@ from the **Actions** tab):
 Download both from the run's **Artifacts** section on GitHub. Nothing else to set
 up — it's a one-person build service.
 
-> Note: the `apk` job builds a **debug** APK (no signing secrets needed). A signed
-> release build in CI would require adding your keystore as encrypted GitHub
-> Secrets — ask if you want that later.
+> Note: the `apk` job builds a **debug** APK (no signing secrets needed). For a
+> **signed release** APK, the `release-apk` job runs when you publish a GitHub
+> release — see **`SIGNING.md`** for the one-time keystore + secrets setup.
