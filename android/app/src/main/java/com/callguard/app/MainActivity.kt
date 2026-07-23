@@ -139,6 +139,7 @@ fun CallGuardApp() {
                     Screen.Analysis -> AnalysisScreen(entries)
                     Screen.Documents -> DocumentsScreen(entries, profile, onEditInfo = { go(Screen.MyInfo) })
                     Screen.Learn -> LearnScreen()
+                    Screen.StateHelp -> StateResourcesScreen(profile)
                     Screen.MyInfo -> MyInfoScreen(profile, onSave = {
                         profile = it
                         ProfileStore.save(context, it)

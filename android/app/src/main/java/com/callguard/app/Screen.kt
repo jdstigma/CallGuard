@@ -2,6 +2,7 @@ package com.callguard.app
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
@@ -21,6 +22,7 @@ enum class Screen(
     Analysis("Analysis", Icons.Filled.BarChart),
     Documents("Documents", Icons.Filled.Description),
     Learn("Learn", Icons.AutoMirrored.Filled.MenuBook),
+    StateHelp("State help", Icons.Filled.AccountBalance),
     MyInfo("My info", Icons.Filled.Person);
 
     companion object {
