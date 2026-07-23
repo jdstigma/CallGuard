@@ -23,12 +23,35 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.callguard.app.Severity
 import com.callguard.app.ui.theme.Teal
 import com.callguard.app.ui.theme.TealDeep
+
+/** Small colored pill showing a call's severity tag. Renders nothing when Unset. */
+@Composable
+fun SeverityBadge(severity: Severity, modifier: Modifier = Modifier) {
+    if (severity == Severity.Unset) return
+    val (bg, fg) = when (severity) {
+        Severity.Silent -> Color(0xFFE7EAF0) to Color(0xFF4A5563)
+        Severity.Spoken -> Color(0xFFFAEEDA) to Color(0xFF854F0B)
+        Severity.Threatening -> Color(0xFFFCEBEB) to Color(0xFFA32D2D)
+        Severity.Unset -> return
+    }
+    Surface(color = bg, shape = RoundedCornerShape(6.dp), modifier = modifier) {
+        Text(
+            severity.label,
+            color = fg,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
+    }
+}
 
 /** Bold section heading used to break long screens into scannable blocks. */
 @Composable

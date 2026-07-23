@@ -23,7 +23,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -33,11 +32,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.callguard.app.ui.SeverityBadge
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -181,25 +180,5 @@ private fun CallRow(entry: CallEntry, onClick: () -> Unit) {
                 modifier = Modifier.padding(top = 2.dp)
             )
         }
-    }
-}
-
-@Composable
-private fun SeverityBadge(severity: Severity) {
-    if (severity == Severity.Unset) return
-    val (bg, fg) = when (severity) {
-        Severity.Silent -> Color(0xFFE7EAF0) to Color(0xFF4A5563)
-        Severity.Spoken -> Color(0xFFFAEEDA) to Color(0xFF854F0B)
-        Severity.Threatening -> Color(0xFFFCEBEB) to Color(0xFFA32D2D)
-        Severity.Unset -> return
-    }
-    Surface(color = bg, shape = RoundedCornerShape(6.dp)) {
-        Text(
-            severity.label,
-            color = fg,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-        )
     }
 }

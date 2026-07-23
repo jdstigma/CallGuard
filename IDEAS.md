@@ -41,6 +41,9 @@ _(moved here when we pick them up)_
 - Title Case document headings _(in progress)_
 - Call Trace (*57) & recording instructions page _(in progress)_
 - Idea #1: Note severity tagging (Silent / Spoken / Threatening) — badges + timeline + CSV
+- Idea #2: Full evidence packet (all docs → one PDF with cover + index)
+- Flagged Numbers screen (per-number notes + stats, flagged only) + flagged-number detail in docs
+- Fix: PDF title glyph overlap (subpixel/linear text, ligatures off)
 
 ---
 

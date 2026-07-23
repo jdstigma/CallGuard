@@ -218,6 +218,11 @@ object DocumentGenerator {
         this.color = color
         textSize = size
         isAntiAlias = true
+        // Android's PdfDocument canvas can collide glyphs (e.g. the "fi" in
+        // "Spoofing") without these: subpixel positioning + no hinting + ligatures off.
+        isSubpixelText = true
+        isLinearText = true
+        fontFeatureSettings = "liga off, clig off"
         typeface = if (bold) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
     }
 
@@ -273,6 +278,37 @@ object DocumentGenerator {
         }
         if (extras.avgPerDay > 0) {
             blocks.add(Block.Body("Average of ${String.format(Locale.US, "%.1f", extras.avgPerDay)} calls per day across the reporting period."))
+        }
+        return blocks
+    }
+
+    /** Per-flagged-number rollup: calls, flagged count, severity tags, notes. */
+    private fun flaggedNumberSection(entries: List<CallEntry>): List<Block> {
+        val groups = entries.groupBy { it.number }
+            .filter { (_, calls) -> calls.any { it.isSuspicious } }
+            .toList()
+            .sortedWith(
+                compareByDescending<Pair<String, List<CallEntry>>> { it.second.count { c -> c.severity == Severity.Threatening } }
+                    .thenByDescending { it.second.count { c -> c.isSuspicious } }
+            )
+        if (groups.isEmpty()) return emptyList()
+
+        val blocks = mutableListOf<Block>(Block.Heading("Flagged Numbers Detail"))
+        groups.forEach { (number, calls) ->
+            val who = calls.firstNotNullOfOrNull { it.cachedName?.takeIf { n -> n.isNotBlank() } } ?: number
+            val flagged = calls.count { it.isSuspicious }
+            val threat = calls.count { it.severity == Severity.Threatening }
+            val spoken = calls.count { it.severity == Severity.Spoken }
+            val silent = calls.count { it.severity == Severity.Silent }
+            val notes = calls.count { !it.note.isNullOrBlank() }
+            val sevParts = buildList {
+                if (threat > 0) add("$threat threatening")
+                if (spoken > 0) add("$spoken spoken")
+                if (silent > 0) add("$silent silent")
+            }
+            val sevStr = if (sevParts.isNotEmpty()) "; tags: ${sevParts.joinToString(", ")}" else ""
+            val noteStr = if (notes > 0) "; $notes noted" else ""
+            blocks.add(Block.Bullet("$who — ${calls.size} calls, $flagged flagged$sevStr$noteStr"))
         }
         return blocks
     }
@@ -488,6 +524,7 @@ object DocumentGenerator {
             val flag = if (n.flaggedCount > 0) " — ${n.flaggedCount} flagged" else ""
             blocks.add(Block.Bullet("$nm: ${n.totalCount} calls$flag"))
         }
+        blocks.addAll(flaggedNumberSection(entries))
         blocks.add(Block.Gap(10f))
         blocks.add(Block.Body("This summary is generated from the device call log. A full per-call CSV is available via the Call log screen's Export."))
         return blocks

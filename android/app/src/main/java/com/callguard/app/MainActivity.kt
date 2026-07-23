@@ -126,7 +126,7 @@ fun CallGuardApp() {
             containerColor = MaterialTheme.colorScheme.background,
         ) { padding ->
             Column(Modifier.padding(padding).fillMaxSize()) {
-                if (!granted && (current == Screen.Home || current == Screen.CallLog || current == Screen.Analysis)) {
+                if (!granted && current in setOf(Screen.Home, Screen.CallLog, Screen.Analysis, Screen.FlaggedNumbers)) {
                     PermissionBanner(
                         onGrant = { permissionLauncher.launch(Manifest.permission.READ_CALL_LOG) }
                     )
@@ -137,6 +137,7 @@ fun CallGuardApp() {
                         if (granted) entries = CallLogRepository.readAll(context)
                     })
                     Screen.Analysis -> AnalysisScreen(entries)
+                    Screen.FlaggedNumbers -> FlaggedNumbersScreen(entries)
                     Screen.Documents -> DocumentsScreen(entries, profile, onEditInfo = { go(Screen.MyInfo) })
                     Screen.Learn -> LearnScreen()
                     Screen.StateHelp -> StateResourcesScreen(profile)
