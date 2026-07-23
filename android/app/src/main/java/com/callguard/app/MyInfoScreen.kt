@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -39,6 +41,7 @@ fun MyInfoScreen(
     var city by remember { mutableStateOf(profile.addressCity) }
     var state by remember { mutableStateOf(profile.state) }
     var carrier by remember { mutableStateOf(profile.carrier) }
+    var harassmentType by remember { mutableStateOf(profile.harassmentType) }
     var fccNo by remember { mutableStateOf(profile.fccComplaintNumber) }
     var policeNo by remember { mutableStateOf(profile.policeCaseNumber) }
     var carrierNo by remember { mutableStateOf(profile.carrierCaseNumber) }
@@ -74,6 +77,29 @@ fun MyInfoScreen(
         Spacer(Modifier.height(16.dp))
 
         CGCard {
+            SectionHeader("Type of harassment")
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "This tailors the wording of your documents. Pick \"Aggressive\" if calls " +
+                    "involve threats or abuse — that unlocks an incident timeline built from your notes.",
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.height(12.dp))
+            Row {
+                HarassmentType.entries.forEach { type ->
+                    FilterChip(
+                        selected = harassmentType == type,
+                        onClick = { harassmentType = type },
+                        label = { Text(type.shortLabel) },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
+        }
+        Spacer(Modifier.height(16.dp))
+
+        CGCard {
             SectionHeader("Case numbers")
             Spacer(Modifier.height(4.dp))
             Text(
@@ -98,6 +124,7 @@ fun MyInfoScreen(
                         addressCity = city.trim(),
                         state = state.trim().uppercase(),
                         carrier = carrier.trim(),
+                        harassmentType = harassmentType,
                         fccComplaintNumber = fccNo.trim(),
                         policeCaseNumber = policeNo.trim(),
                         carrierCaseNumber = carrierNo.trim(),
