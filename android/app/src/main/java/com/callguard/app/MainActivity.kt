@@ -334,7 +334,7 @@ private fun HelpTab() {
             HelpSection(
                 "Important limit",
                 "This app documents calls — it cannot reveal who is really calling " +
-                    "when the number is spoofed. Only your carrier (AT&T) and the police " +
+                    "when the number is spoofed. Only your phone carrier and the police " +
                     "can unmask that, via a traceback / subpoena. The CSV and PDF are the " +
                     "evidence that gets them to act. See the FCC complaint and police " +
                     "cover-note documents in the project."
