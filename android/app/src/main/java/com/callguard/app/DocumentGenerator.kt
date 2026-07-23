@@ -324,19 +324,31 @@ object DocumentGenerator {
 
     private fun trunc(s: String, n: Int = 28) = if (s.length > n) s.take(n - 1) + "…" else s
 
-    /** Per-flagged-number rollup: calls, flagged count, severity tags, notes. */
+    /**
+     * The flagged numbers that actually matter — repeat callers, tagged, or noted
+     * — capped so a spoofing campaign of thousands of one-off numbers doesn't print
+     * pages of noise. The long tail is summarized in a single line (which is itself
+     * evidence of spoofing).
+     */
     private fun flaggedNumberSection(entries: List<CallEntry>): List<Block> {
+        val CAP = 15
         val groups = entries.groupBy { it.number }
             .filter { (_, calls) -> calls.any { it.isSuspicious } }
             .toList()
             .sortedWith(
                 compareByDescending<Pair<String, List<CallEntry>>> { it.second.count { c -> c.severity == Severity.Threatening } }
+                    .thenByDescending { it.second.count { c -> !c.note.isNullOrBlank() } }
+                    .thenByDescending { it.second.size }
                     .thenByDescending { it.second.count { c -> c.isSuspicious } }
             )
         if (groups.isEmpty()) return emptyList()
 
-        val blocks = mutableListOf<Block>(Block.Heading("Flagged Numbers Detail"))
-        groups.forEach { (number, calls) ->
+        val shown = groups.take(CAP)
+        val remaining = groups.size - shown.size
+
+        val heading = if (remaining > 0) "Most Significant Flagged Numbers (Top $CAP)" else "Flagged Numbers Detail"
+        val blocks = mutableListOf<Block>(Block.Heading(heading))
+        shown.forEach { (number, calls) ->
             val who = calls.firstNotNullOfOrNull { it.cachedName?.takeIf { n -> n.isNotBlank() } } ?: number
             val flagged = calls.count { it.isSuspicious }
             val threat = calls.count { it.severity == Severity.Threatening }
@@ -351,6 +363,18 @@ object DocumentGenerator {
             val sevStr = if (sevParts.isNotEmpty()) "; tags: ${sevParts.joinToString(", ")}" else ""
             val noteStr = if (notes > 0) "; $notes noted" else ""
             blocks.add(Block.Bullet("$who — ${calls.size} calls, $flagged flagged$sevStr$noteStr"))
+        }
+        if (remaining > 0) {
+            val tailCalls = groups.drop(CAP).sumOf { it.second.size }
+            val tailOneOff = groups.drop(CAP).count { it.second.size == 1 }
+            blocks.add(Block.Gap(4f))
+            blocks.add(
+                Block.Body(
+                    "Plus $remaining additional flagged numbers accounting for $tailCalls calls" +
+                        (if (tailOneOff > 0) ", $tailOneOff of which called exactly once — a hallmark of caller ID spoofing used to evade blocking" else "") +
+                        ". The complete per-call list is available in the exported CSV."
+                )
+            )
         }
         return blocks
     }
