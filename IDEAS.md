@@ -9,18 +9,20 @@ When we pick one up, move it to the relevant section and update status.
 
 ## Under review (bounce 1-by-1)
 
+Priority-ordered (reordered 2026-07-23). Completed ideas are in the Done section below.
+
 | # | Idea | Notes | Status |
 |---|------|-------|--------|
-| 1 | **Note severity tagging** | Let each call note be tagged silent / spoken / threatening so the Incident Timeline can visibly show escalation, and stats can count threat-level. Builds on the free-text notes. | ✅ done |
-| 2 | **Evidence packet (one PDF)** | A single "Generate everything" button that bundles all documents into one PDF with a cover/index page. | ✅ done |
-| 3 | **State-aware recording-consent flag** | Add a one-party vs all-party consent field to the per-state data so the *57/recording page warns based on the user's state (with a strong "verify" caveat). | 💡 proposed |
-| 4 | **Threat-keyword highlighting** | Auto-highlight words like "threat/kill/hurt/address" in the notes timeline to surface the most serious incidents. Speculative — needs care to avoid false signals. | 💡 proposed |
-| 5 | **Flag-threshold setting** | The silent-call flag is hardcoded at ≤15s. A Settings control to adjust the threshold. | 💡 proposed |
-| 6 | **Editable doc preview** | Preview/edit the filled-in document text before generating the PDF. | 💡 proposed |
-| 7 | **Richer Learn / start-here flow** | A guided step-by-step "start here" path and an FAQ in the Learn section. | 💡 proposed |
-| 8 | **Dark-mode polish pass** | Review every screen in dark mode for contrast/spacing. | 💡 proposed |
-| 9 | **Surface remaining .md content in Learn** | From the original vision: the guides are in Learn, but `analysis/HOW_TO_GET_CALL_RECORDS.md` (how to pull carrier call records / CDRs, the iPhone path) isn't in-app yet. Fold it into Learn. | 💡 proposed (from initial prompt) |
-| 10 | **Active call monitoring / alerts** | From the original vision of a "call monitor": today it's passive (manual refresh). Add a notification when a new flagged/suspicious call is detected. Needs a background receiver — scope carefully vs. Play Store call-log policy. | 💡 proposed (from initial prompt) |
+| 1 | **Flagged Numbers detail + polish** | Tap a number → its own screen with stats + charts + full notes, and a simple back button to the list. Polish the list itself (declutter, clearly tappable cards). | ✅ done |
+| 2 | **Caller-name branches (group spoofed numbers)** | Select multiple numbers and file them under one custom "unknown branch" with a Caller Name tag, so spoofed numbers from the same source read as one identity. Auto-fill the name from contacts when the number is a saved contact. Grouped stats; documents reference the group. | 💡 proposed |
+| 3 | **Editable doc preview** | Preview/edit the filled-in document text before generating the PDF. | 💡 proposed |
+| 4 | **Flag-threshold setting** | The silent-call flag is hardcoded at ≤15s. A Settings control to adjust the threshold. | 💡 proposed |
+| 5 | **State-aware recording-consent flag** | Add a one-party vs all-party consent field to the per-state data so the *57/recording page warns based on the user's state (with a strong "verify" caveat). | 💡 proposed |
+| 6 | **Surface remaining .md content in Learn** | `analysis/HOW_TO_GET_CALL_RECORDS.md` (how to pull carrier call records / CDRs, the iPhone path) isn't in-app yet. Fold it into Learn. | 💡 proposed (from initial prompt) |
+| 7 | **Threat-keyword highlighting** | Auto-highlight words like "threat/kill/hurt/address" in the notes timeline to surface the most serious incidents. Speculative — needs care to avoid false signals. | 💡 proposed |
+| 8 | **Richer Learn / start-here flow** | A guided step-by-step "start here" path and an FAQ in the Learn section. | 💡 proposed |
+| 9 | **Active call monitoring / alerts** | From the original "call monitor" vision: today it's passive (manual refresh). Add a notification when a new flagged/suspicious call is detected. Needs a background receiver — scope carefully vs. Play Store call-log policy. | 💡 proposed (from initial prompt) |
+| 10 | **Dark-mode polish pass** | Review every screen in dark mode for contrast/spacing. | 💡 proposed |
 
 ---
 
@@ -46,6 +48,8 @@ _(moved here when we pick them up)_
 - Fix: PDF title glyph overlap (subpixel/linear text, ligatures off)
 - Vector charts in PDFs: pie (flagged vs normal) + top-numbers bar in every
   evidence doc; severity bar in the timeline (all except the *57 how-to page)
+- Idea #1 (reprioritized): Flagged Numbers detail view (tap → per-number stats,
+  charts, notes, back button) + polished tappable list cards
 
 ---
 
