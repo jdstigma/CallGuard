@@ -56,19 +56,19 @@ passwords somewhere safe and backed up (a password manager is ideal).
 
 ## Cutting a signed release
 
-Once the secrets are set, every time you **publish a GitHub release** the
-`release-apk` CI job runs `./gradlew assembleRelease` with your keystore and
-uploads `app-release.apk` (signed) to that release.
+Once the secrets are set, every time you **publish a GitHub release** two CI jobs
+run: `release-apk` builds a signed `app-release.apk` with your keystore, and
+`release-exe` builds `CallGuard.exe` — both are attached to that release.
 
 ```bash
 # bump versionName/versionCode in android/app/build.gradle.kts first, then:
-gh release create v1.1.0 --repo jdstigma/CallGuard --title "CallGuard v1.1.0" --notes "..."
+gh release create v1.0.3 --repo jdstigma/CallGuard --title "CallGuard v1.0.3" --notes "..."
 ```
 
-Watch it: `gh run watch` — when green, the signed APK is attached to the release.
+Watch it: `gh run watch` — when green, the signed APK and the exe are attached.
 
-> The existing v1.0.0 release was cut before signing was set up. To get a signed
-> build, publish a **new** release (e.g. v1.0.1) after adding the secrets.
+> Signing is active as of v1.0.1 (v1.0.1 and v1.0.2 ship signed APKs); each new
+> release is signed automatically. Only the original v1.0.0 release is unsigned.
 
 ## How the pieces connect
 - `android/app/build.gradle.kts` — a `release` signing config that reads

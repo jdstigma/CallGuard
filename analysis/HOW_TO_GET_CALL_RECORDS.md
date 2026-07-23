@@ -65,5 +65,5 @@ immediate hang-ups. Adjust the idea with your own judgment when presenting it.
 
 ### Outputs
 Same as always: four PNG charts plus `CallGuard_summary.pdf` in the `charts`
-folder — one page you can hand to your carrier or the police, now built from
-authoritative carrier data covering **both** your phones.
+folder — one page you can hand to your carrier or the police, built from
+authoritative, carrier-verified call data.

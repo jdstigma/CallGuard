@@ -46,7 +46,8 @@ covers first-time setup). Min SDK 29, package `com.callguard.app`.
 **Analysis (PC):** `pip install pandas matplotlib`, then double-click
 **`CallGuard Control Panel.bat`** — or `python analysis/analyze_calls.py --csv <file>`.
 
-**Build artifacts:** `BUILD_DISTRIBUTABLES.md` covers the APK, the `.exe`, and CI.
+**Build artifacts:** `BUILD_DISTRIBUTABLES.md` covers the APK, the `.exe`, and CI;
+`SIGNING.md` covers signed release builds.
 
 ## Privacy
 

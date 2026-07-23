@@ -23,9 +23,8 @@ Notes:
 
 ## 2. The phone app → `CallGuard.apk`
 
-You build this in **Android Studio** (the project you already have open).
-
-The buildable Gradle project lives in **`android/`** in this repo.
+You build this in **Android Studio**. The buildable Gradle project lives in
+**`android/`** in this repo — open that folder in Android Studio.
 
 **Quick personal build (debug APK — simplest):**
 1. Open **`android/`** in Android Studio → **Build** menu → **Build Bundle(s) /
@@ -60,6 +59,8 @@ from the **Actions** tab):
 Download both from the run's **Artifacts** section on GitHub. Nothing else to set
 up — it's a one-person build service.
 
-> Note: the `apk` job builds a **debug** APK (no signing secrets needed). For a
-> **signed release** APK, the `release-apk` job runs when you publish a GitHub
-> release — see **`SIGNING.md`** for the one-time keystore + secrets setup.
+> Note: the `apk`/`exe` jobs above build a **debug** APK and the exe on every
+> push (no secrets needed). When you **publish a GitHub release**, two more jobs
+> run — `release-apk` (a **signed** APK) and `release-exe` (the exe) — and attach
+> both to that release. See **`SIGNING.md`** for the one-time keystore + secrets
+> setup that the signed build needs.

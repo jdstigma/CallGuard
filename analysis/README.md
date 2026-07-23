@@ -1,8 +1,12 @@
 # CallGuard — Report-grade charts (matplotlib)
 
-Turns a CallGuard CSV export into high-resolution PNG charts for reports, emails
-to AT&T, or a police packet. Runs on your PC — the app stays lightweight; this is
+Turns a call log into high-resolution PNG charts for reports, emails to your
+carrier, or a police packet. Runs on your PC — the app stays lightweight; this is
 where the polished figures come from.
+
+`analyze_calls.py` auto-detects the input format: a **CallGuard app export**, a
+**carrier records** export from any carrier (see `HOW_TO_GET_CALL_RECORDS.md`), or
+a **Google Voice** CSV from `../google_voice/gvoice_to_csv.py`.
 
 ## One-time setup
 ```bash
