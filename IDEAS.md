@@ -44,6 +44,8 @@ _(moved here when we pick them up)_
 - Idea #2: Full evidence packet (all docs → one PDF with cover + index)
 - Flagged Numbers screen (per-number notes + stats, flagged only) + flagged-number detail in docs
 - Fix: PDF title glyph overlap (subpixel/linear text, ligatures off)
+- Vector charts in PDFs: pie (flagged vs normal) + top-numbers bar in every
+  evidence doc; severity bar in the timeline (all except the *57 how-to page)
 
 ---
 

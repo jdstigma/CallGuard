@@ -327,6 +327,25 @@ object DocumentGenerator {
         return blocks
     }
 
+    private fun trunc(s: String, n: Int = 28) = if (s.length > n) s.take(n - 1) + "…" else s
+
+    /** A pie (flagged vs normal) + a top-numbers bar chart, shared by the docs. */
+    private fun chartSection(stats: CallStats): List<Block> {
+        if (stats.totalCalls == 0) return emptyList()
+        val blocks = mutableListOf<Block>(
+            Block.Heading("Call Pattern At A Glance"),
+            Block.Pie(stats.flaggedCalls, (stats.totalCalls - stats.flaggedCalls).coerceAtLeast(0)),
+        )
+        val topBars = stats.perNumber.take(6).map { n ->
+            ChartBar(trunc(n.name?.takeIf { it.isNotBlank() } ?: n.number), n.totalCount, n.flaggedCount > 0)
+        }
+        if (topBars.isNotEmpty()) {
+            blocks.add(Block.Heading("Top Numbers"))
+            blocks.add(Block.BarChart(topBars))
+        }
+        return blocks
+    }
+
     /** Per-flagged-number rollup: calls, flagged count, severity tags, notes. */
     private fun flaggedNumberSection(entries: List<CallEntry>): List<Block> {
         val groups = entries.groupBy { it.number }
@@ -410,6 +429,8 @@ object DocumentGenerator {
             Block.Body("This packet documents a campaign of harassing phone calls and is intended to support a carrier traceback. It contains ${stats.totalCalls} logged calls from ${stats.uniqueNumbers} distinct numbers, ${stats.flaggedCalls} matching the harassment pattern."),
         )
         blocks.addAll(statsSection(entries))
+        blocks.add(Block.Heading("Flagged Vs Normal"))
+        blocks.add(Block.Pie(stats.flaggedCalls, (stats.totalCalls - stats.flaggedCalls).coerceAtLeast(0)))
         blocks.add(Block.Heading("Contents"))
         PACKET_CONTENTS.forEachIndexed { i, t ->
             blocks.add(Block.Bullet("${i + 1}.  ${t.displayName}"))
@@ -439,6 +460,7 @@ object DocumentGenerator {
             Block.Bullet("Method: Phone call"),
         )
         blocks.addAll(statsSection(entries))
+        blocks.addAll(chartSection(stats))
         blocks.add(Block.Heading("Description (Paste This)"))
         blocks.add(Block.Body("I am receiving a sustained campaign of harassing phone calls to my cell phone, $phone. Over the period $first to $last I have logged ${stats.totalCalls} calls from ${stats.uniqueNumbers} distinct phone numbers. ${patternSentence(profile, stats)}"))
         blocks.add(Block.Body("I did not consent to these calls. I am requesting FCC action against this illegal spoofing under the Truth in Caller ID Act and the TRACED Act."))
@@ -472,6 +494,7 @@ object DocumentGenerator {
             Block.Body("Over the period $first to $last I have logged ${stats.totalCalls} calls from ${stats.uniqueNumbers} distinct phone numbers. ${patternSentence(profile, stats)}"),
         )
         blocks.addAll(statsSection(entries))
+        blocks.addAll(chartSection(stats))
         if (profile.harassmentType.includesAggressive) {
             blocks.add(Block.Body("Specific threatening/abusive incidents are itemized in the attached CallGuard incident timeline, compiled from notes taken at the time of each call."))
         }
@@ -503,6 +526,7 @@ object DocumentGenerator {
             Block.Body("I have logged ${stats.totalCalls} calls from ${stats.uniqueNumbers} different numbers, ${stats.flaggedCalls} matching the harassment pattern. I am also filing an FCC complaint and a police report."),
         )
         blocks.addAll(statsSection(entries))
+        blocks.addAll(chartSection(stats))
         blocks.add(Block.Gap(6f))
         blocks.add(Block.Body("Note: carrier tools block and document — they cannot reveal a spoofed caller to you directly. Only a police subpoena unmasks the origin."))
         blocks.add(Block.Gap(6f))
@@ -531,6 +555,12 @@ object DocumentGenerator {
         blocks.add(Block.Heading("Documented Incidents (${documented.size})"))
         if (threatening + spoken + silent > 0) {
             blocks.add(Block.Body("Severity tags across these incidents: $threatening threatening, $spoken spoken, $silent silent."))
+            val sevBars = listOf(
+                ChartBar("Threatening", threatening, true),
+                ChartBar("Spoken", spoken, false),
+                ChartBar("Silent", silent, false),
+            ).filter { it.value > 0 }
+            if (sevBars.isNotEmpty()) blocks.add(Block.BarChart(sevBars))
         }
         documented.forEach { e ->
             val who = e.cachedName?.takeIf { it.isNotBlank() } ?: e.number
