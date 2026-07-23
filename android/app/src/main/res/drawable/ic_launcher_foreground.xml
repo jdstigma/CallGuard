@@ -3,16 +3,29 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Phone body (white, rounded) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M47,24 L61,24 Q69,24 69,32 L69,76 Q69,84 61,84 L47,84 Q39,84 39,76 L39,32 Q39,24 47,24 Z" />
-    <!-- Screen -->
-    <path
-        android:fillColor="#1565C0"
-        android:pathData="M47,32 L61,32 Q64,32 64,35 L64,73 Q64,76 61,76 L47,76 Q44,76 44,73 L44,35 Q44,32 47,32 Z" />
-    <!-- Lightning bolt -->
-    <path
-        android:fillColor="#FFD400"
-        android:pathData="M57,36 L47,57 L53,57 L50,72 L61,51 L55,51 Z" />
+    <!-- Large lightning bolt across the icon, rotated 45 degrees (dark navy outline) -->
+    <group
+        android:rotation="30"
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.5"
+        android:scaleY="1.5">
+        <path
+            android:fillColor="#FFD400"
+            android:strokeColor="#04173A"
+            android:strokeWidth="1.4"
+            android:pathData="M58,18 L42,48 L51,50 L38,72 L48,72 L44,90 L60,60 L51,58 L70,40 L55,42 Z" />
+    </group>
+    <!-- Telephone receiver layered on top (white, dark navy outline) -->
+    <group
+        android:scaleX="2.65"
+        android:scaleY="2.65"
+        android:translateX="22.2"
+        android:translateY="22.2">
+        <path
+            android:fillColor="#FFFFFF"
+            android:strokeColor="#04173A"
+            android:strokeWidth="0.9"
+            android:pathData="M6.62,10.79c1.44,2.83 3.76,5.14 6.59,6.59l2.2,-2.2c0.27,-0.27 0.67,-0.36 1.02,-0.24 1.12,0.37 2.33,0.57 3.57,0.57 0.55,0 1,0.45 1,1V20c0,0.55 -0.45,1 -1,1 -9.39,0 -17,-7.61 -17,-17 0,-0.55 0.45,-1 1,-1h3.5c0.55,0 1,0.45 1,1 0,1.25 0.2,2.45 0.57,3.57 0.11,0.35 0.03,0.74 -0.25,1.02l-2.2,2.2z" />
+    </group>
 </vector>
