@@ -15,8 +15,8 @@ android {
         applicationId = "com.callguard.app"
         minSdk = 29
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.2.0"
+        versionCode = 6
+        versionName = "1.3.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

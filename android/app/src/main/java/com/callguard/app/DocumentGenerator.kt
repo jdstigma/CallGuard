@@ -87,7 +87,8 @@ object DocumentGenerator {
         entries: List<CallEntry>,
     ): Result {
         val stats = CallStats.from(entries)
-        val blocks = buildBlocks(type, profile, stats, entries)
+        val branches = BranchStore.all(context)
+        val blocks = buildBlocks(type, profile, stats, entries, branches)
         val doc = renderPdf(blocks)
 
         val fileName = "CallGuard_${type.fileSlug}_${stamp.format(Date())}.pdf"
@@ -330,9 +331,9 @@ object DocumentGenerator {
      * pages of noise. The long tail is summarized in a single line (which is itself
      * evidence of spoofing).
      */
-    private fun flaggedNumberSection(entries: List<CallEntry>): List<Block> {
+    private fun flaggedNumberSection(entries: List<CallEntry>, branches: Map<String, String>): List<Block> {
         val CAP = 15
-        val groups = entries.groupBy { it.number }
+        val groups = entries.groupBy { branches[it.number] ?: it.number }
             .filter { (_, calls) -> calls.any { it.isSuspicious } }
             .toList()
             .sortedWith(
@@ -348,8 +349,13 @@ object DocumentGenerator {
 
         val heading = if (remaining > 0) "Most Significant Flagged Numbers (Top $CAP)" else "Flagged Numbers Detail"
         val blocks = mutableListOf<Block>(Block.Heading(heading))
-        shown.forEach { (number, calls) ->
-            val who = calls.firstNotNullOfOrNull { it.cachedName?.takeIf { n -> n.isNotBlank() } } ?: number
+        shown.forEach { (key, calls) ->
+            val memberNumbers = calls.map { it.number }.distinct()
+            val isBranch = memberNumbers.size > 1 || branches[memberNumbers.first()] == key
+            val who = if (isBranch)
+                "Caller \"$key\" (${memberNumbers.size} number${if (memberNumbers.size == 1) "" else "s"})"
+            else
+                calls.firstNotNullOfOrNull { it.cachedName?.takeIf { n -> n.isNotBlank() } } ?: key
             val flagged = calls.count { it.isSuspicious }
             val threat = calls.count { it.severity == Severity.Threatening }
             val spoken = calls.count { it.severity == Severity.Spoken }
@@ -400,13 +406,14 @@ object DocumentGenerator {
         profile: UserProfile,
         stats: CallStats,
         entries: List<CallEntry>,
+        branches: Map<String, String>,
     ): List<Block> = when (type) {
-        DocumentType.EvidencePacket -> evidencePacket(profile, stats, entries)
+        DocumentType.EvidencePacket -> evidencePacket(profile, stats, entries, branches)
         DocumentType.FccComplaint -> fccComplaint(profile, stats, entries)
         DocumentType.PoliceReport -> policeReport(profile, stats, entries)
         DocumentType.CarrierScript -> carrierScript(profile, stats)
         DocumentType.IncidentTimeline -> incidentTimeline(profile, entries)
-        DocumentType.EvidenceSummary -> evidenceSummary(profile, stats, entries)
+        DocumentType.EvidenceSummary -> evidenceSummary(profile, stats, entries, branches)
     }
 
     /** The documents bundled into the packet, in the order officials should read them. */
@@ -418,7 +425,7 @@ object DocumentGenerator {
         DocumentType.CarrierScript,
     )
 
-    private fun evidencePacket(profile: UserProfile, stats: CallStats, entries: List<CallEntry>): List<Block> {
+    private fun evidencePacket(profile: UserProfile, stats: CallStats, entries: List<CallEntry>, branches: Map<String, String>): List<Block> {
         val (first, last) = dateRange(entries)
         val blocks = mutableListOf<Block>(
             Block.Title("CallGuard Evidence Packet"),
@@ -434,7 +441,7 @@ object DocumentGenerator {
         }
         PACKET_CONTENTS.forEach { t ->
             blocks.add(Block.PageBreak)
-            blocks.addAll(buildBlocks(t, profile, stats, entries))
+            blocks.addAll(buildBlocks(t, profile, stats, entries, branches))
         }
         return blocks
     }
@@ -582,7 +589,7 @@ object DocumentGenerator {
         return blocks
     }
 
-    private fun evidenceSummary(profile: UserProfile, stats: CallStats, entries: List<CallEntry>): List<Block> {
+    private fun evidenceSummary(profile: UserProfile, stats: CallStats, entries: List<CallEntry>, branches: Map<String, String>): List<Block> {
         val (first, last) = dateRange(entries)
         val blocks = mutableListOf<Block>(
             Block.Title("CallGuard — Evidence Summary"),
@@ -608,7 +615,7 @@ object DocumentGenerator {
             val flag = if (n.flaggedCount > 0) " — ${n.flaggedCount} flagged" else ""
             blocks.add(Block.Bullet("$nm: ${n.totalCount} calls$flag"))
         }
-        blocks.addAll(flaggedNumberSection(entries))
+        blocks.addAll(flaggedNumberSection(entries, branches))
         blocks.add(Block.Gap(10f))
         blocks.add(Block.Body("This summary is generated from the device call log. A full per-call CSV is available via the Call log screen's Export."))
         return blocks

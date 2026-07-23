@@ -21,12 +21,19 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,10 +54,15 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/** One flagged number with its rolled-up stats and the calls behind it. */
-private data class FlaggedNumber(
-    val number: String,
-    val name: String?,
+/**
+ * One row on the flagged list: either a single flagged number, or a named
+ * branch — several numbers grouped under one caller identity.
+ */
+private data class FlaggedGroup(
+    val key: String,            // branch name, or the number itself when ungrouped
+    val label: String,          // what we show: branch name / contact name / number
+    val isBranch: Boolean,
+    val numbers: List<String>,  // member numbers (size 1 unless a branch)
     val total: Int,
     val flagged: Int,
     val firstSeen: Long,
@@ -57,17 +70,24 @@ private data class FlaggedNumber(
     val threatening: Int,
     val spoken: Int,
     val silent: Int,
-    val notedCalls: List<CallEntry>, // calls with a note or severity, chronological
-    val allCalls: List<CallEntry>,   // every call from this number, newest first
+    val notedCalls: List<CallEntry>,
+    val allCalls: List<CallEntry>,
 )
 
-private fun flaggedNumbers(entries: List<CallEntry>): List<FlaggedNumber> =
-    entries.groupBy { it.number }
+private fun buildGroups(entries: List<CallEntry>, branches: Map<String, String>): List<FlaggedGroup> {
+    // Group calls by branch name when assigned, else by the number itself.
+    val byKey = entries.groupBy { branches[it.number] ?: it.number }
+    return byKey
         .filter { (_, calls) -> calls.any { it.isSuspicious } }
-        .map { (number, calls) ->
-            FlaggedNumber(
-                number = number,
-                name = calls.firstNotNullOfOrNull { it.cachedName?.takeIf { n -> n.isNotBlank() } },
+        .map { (key, calls) ->
+            val isBranch = branches.containsValue(key) && calls.any { branches[it.number] == key }
+            val numbers = calls.map { it.number }.distinct()
+            val contactName = calls.firstNotNullOfOrNull { it.cachedName?.takeIf { n -> n.isNotBlank() } }
+            FlaggedGroup(
+                key = key,
+                label = if (isBranch) key else (contactName ?: key),
+                isBranch = isBranch,
+                numbers = numbers,
                 total = calls.size,
                 flagged = calls.count { it.isSuspicious },
                 firstSeen = calls.minOf { it.timestampMillis },
@@ -81,42 +101,87 @@ private fun flaggedNumbers(entries: List<CallEntry>): List<FlaggedNumber> =
                 allCalls = calls.sortedByDescending { it.timestampMillis },
             )
         }
-        .sortedWith(compareByDescending<FlaggedNumber> { it.threatening }.thenByDescending { it.flagged })
-
-@Composable
-fun FlaggedNumbersScreen(entries: List<CallEntry>) {
-    val flagged = remember(entries) { flaggedNumbers(entries) }
-    var selectedNumber by remember { mutableStateOf<String?>(null) }
-    val selected = selectedNumber?.let { num -> flagged.firstOrNull { it.number == num } }
-
-    if (selected != null) {
-        BackHandler { selectedNumber = null }
-        NumberDetail(selected, onBack = { selectedNumber = null })
-    } else {
-        FlaggedList(flagged, onOpen = { selectedNumber = it })
-    }
+        .sortedWith(compareByDescending<FlaggedGroup> { it.threatening }.thenByDescending { it.flagged })
 }
 
 @Composable
-private fun FlaggedList(flagged: List<FlaggedNumber>, onOpen: (String) -> Unit) {
+fun FlaggedNumbersScreen(entries: List<CallEntry>) {
+    val context = LocalContext.current
+    var branchVersion by remember { mutableStateOf(0) } // bump to re-read the store
+    val branches = remember(branchVersion) { BranchStore.all(context) }
+    val groups = remember(entries, branches) { buildGroups(entries, branches) }
+
+    var selectedKey by remember { mutableStateOf<String?>(null) }
+    var selectionMode by remember { mutableStateOf(false) }
+    var checked by remember { mutableStateOf(setOf<String>()) }
+    var showNameDialog by remember { mutableStateOf(false) }
+
+    val selected = selectedKey?.let { k -> groups.firstOrNull { it.key == k } }
+
+    if (selected != null) {
+        BackHandler { selectedKey = null }
+        GroupDetail(
+            g = selected,
+            onBack = { selectedKey = null },
+            onUngroup = {
+                BranchStore.removeBranch(context, selected.key)
+                branchVersion++
+                selectedKey = null
+            },
+        )
+        return
+    }
+
+    if (selectionMode) BackHandler { selectionMode = false; checked = emptySet() }
+
     LazyColumn(Modifier.fillMaxSize().padding(16.dp)) {
         item {
-            Text(
-                "Flagged numbers",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onBackground,
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    "Flagged numbers",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                )
+                TextButton(onClick = {
+                    selectionMode = !selectionMode
+                    checked = emptySet()
+                }) {
+                    Text(if (selectionMode) "Cancel" else "Group")
+                }
+            }
             Spacer(Modifier.height(2.dp))
             Text(
-                "Numbers with at least one flagged call. Tap one for its stats, charts, and notes.",
+                if (selectionMode)
+                    "Check the numbers that are really the same caller, then name the group."
+                else
+                    "Tap a number for stats, charts, and notes. Use Group to file several " +
+                        "spoofed numbers under one caller name.",
                 fontSize = 13.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(12.dp))
+            if (selectionMode) {
+                Button(
+                    onClick = { if (checked.isNotEmpty()) showNameDialog = true },
+                    enabled = checked.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text(
+                        if (checked.isEmpty()) "Select numbers to group"
+                        else "Group ${checked.size} under one caller…"
+                    )
+                }
+                Spacer(Modifier.height(12.dp))
+            }
         }
 
-        if (flagged.isEmpty()) {
+        if (groups.isEmpty()) {
             item {
                 CGCard {
                     Text(
@@ -135,19 +200,94 @@ private fun FlaggedList(flagged: List<FlaggedNumber>, onOpen: (String) -> Unit) 
                 }
             }
         } else {
-            items(flagged) { fn ->
-                FlaggedListCard(fn) { onOpen(fn.number) }
+            items(groups, key = { it.key }) { g ->
+                GroupListCard(
+                    g = g,
+                    selectionMode = selectionMode,
+                    checked = g.key in checked,
+                    onToggleCheck = {
+                        checked = if (g.key in checked) checked - g.key else checked + g.key
+                    },
+                    onOpen = { selectedKey = g.key },
+                )
                 Spacer(Modifier.height(10.dp))
             }
         }
     }
+
+    if (showNameDialog) {
+        // Prefill with a contact name from the selection, else an existing branch name.
+        val selectedGroups = groups.filter { it.key in checked }
+        val prefill = selectedGroups.firstOrNull { it.isBranch }?.key
+            ?: selectedGroups.firstNotNullOfOrNull { g ->
+                g.allCalls.firstNotNullOfOrNull { it.cachedName?.takeIf { n -> n.isNotBlank() } }
+            } ?: ""
+        GroupNameDialog(
+            initial = prefill,
+            count = selectedGroups.sumOf { it.numbers.size },
+            onDismiss = { showNameDialog = false },
+            onConfirm = { name ->
+                BranchStore.assign(context, selectedGroups.flatMap { it.numbers }, name)
+                branchVersion++
+                showNameDialog = false
+                selectionMode = false
+                checked = emptySet()
+            },
+        )
+    }
 }
 
 @Composable
-private fun FlaggedListCard(fn: FlaggedNumber, onClick: () -> Unit) {
+private fun GroupNameDialog(
+    initial: String,
+    count: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit,
+) {
+    var name by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Name this caller") },
+        text = {
+            Column {
+                Text(
+                    "$count number${if (count == 1) "" else "s"} will be filed under this caller name. " +
+                        "Documents will report them as one identity.",
+                    fontSize = 13.sp,
+                )
+                Spacer(Modifier.height(10.dp))
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("e.g. Unknown Night Caller") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { if (name.isNotBlank()) onConfirm(name) },
+                enabled = name.isNotBlank(),
+            ) { Text("Group") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun GroupListCard(
+    g: FlaggedGroup,
+    selectionMode: Boolean,
+    checked: Boolean,
+    onToggleCheck: () -> Unit,
+    onOpen: () -> Unit,
+) {
     val fmt = remember { SimpleDateFormat("MMM d, yyyy", Locale.US) }
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier = Modifier.fillMaxWidth().clickable {
+            if (selectionMode) onToggleCheck() else onOpen()
+        },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
@@ -158,34 +298,52 @@ private fun FlaggedListCard(fn: FlaggedNumber, onClick: () -> Unit) {
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        fn.name?.takeIf { it.isNotBlank() } ?: fn.number,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        "${fn.total} calls · ${fn.flagged} flagged · last ${fmt.format(Date(fn.lastSeen))}",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                    if (selectionMode) {
+                        Checkbox(checked = checked, onCheckedChange = { onToggleCheck() })
+                        Spacer(Modifier.width(4.dp))
+                    }
+                    if (g.isBranch) {
+                        Icon(
+                            Icons.Filled.Folder,
+                            contentDescription = "Caller group",
+                            tint = MaterialTheme.colorScheme.secondary,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Spacer(Modifier.width(8.dp))
+                    }
+                    Column {
+                        Text(
+                            g.label,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            (if (g.isBranch) "${g.numbers.size} numbers · " else "") +
+                                "${g.total} calls · ${g.flagged} flagged · last ${fmt.format(Date(g.lastSeen))}",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (!selectionMode) {
+                    Icon(
+                        Icons.Filled.ChevronRight,
+                        contentDescription = "Open",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                Icon(
-                    Icons.Filled.ChevronRight,
-                    contentDescription = "Open",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
             }
-            if (fn.threatening + fn.spoken + fn.silent > 0 || fn.notedCalls.isNotEmpty()) {
+            if (g.threatening + g.spoken + g.silent > 0 || g.notedCalls.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (fn.threatening > 0) { CountBadge(Severity.Threatening, fn.threatening); Spacer(Modifier.width(6.dp)) }
-                    if (fn.spoken > 0) { CountBadge(Severity.Spoken, fn.spoken); Spacer(Modifier.width(6.dp)) }
-                    if (fn.silent > 0) { CountBadge(Severity.Silent, fn.silent); Spacer(Modifier.width(6.dp)) }
-                    if (fn.notedCalls.isNotEmpty()) {
+                    if (g.threatening > 0) { CountBadge(Severity.Threatening, g.threatening); Spacer(Modifier.width(6.dp)) }
+                    if (g.spoken > 0) { CountBadge(Severity.Spoken, g.spoken); Spacer(Modifier.width(6.dp)) }
+                    if (g.silent > 0) { CountBadge(Severity.Silent, g.silent); Spacer(Modifier.width(6.dp)) }
+                    if (g.notedCalls.isNotEmpty()) {
                         Text(
-                            "${fn.notedCalls.size} note${if (fn.notedCalls.size == 1) "" else "s"}",
+                            "${g.notedCalls.size} note${if (g.notedCalls.size == 1) "" else "s"}",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.secondary,
                             fontWeight = FontWeight.Medium,
@@ -198,8 +356,9 @@ private fun FlaggedListCard(fn: FlaggedNumber, onClick: () -> Unit) {
 }
 
 @Composable
-private fun NumberDetail(fn: FlaggedNumber, onBack: () -> Unit) {
+private fun GroupDetail(g: FlaggedGroup, onBack: () -> Unit, onUngroup: () -> Unit) {
     val fmt = remember { SimpleDateFormat("MMM d, yyyy HH:mm", Locale.US) }
+    var confirmUngroup by remember { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
         Row(
@@ -212,28 +371,43 @@ private fun NumberDetail(fn: FlaggedNumber, onBack: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
 
-        Text(
-            fn.name?.takeIf { it.isNotBlank() } ?: fn.number,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-        if (!fn.name.isNullOrBlank()) {
-            Text(fn.number, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (g.isBranch) {
+                Icon(Icons.Filled.Folder, contentDescription = null, tint = MaterialTheme.colorScheme.secondary)
+                Spacer(Modifier.width(8.dp))
+            }
+            Text(
+                g.label,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+        }
+        if (g.isBranch) {
+            Text(
+                "Caller group · ${g.numbers.size} numbers",
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        } else if (g.label != g.key) {
+            Text(g.key, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Spacer(Modifier.height(16.dp))
 
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StatTile(fn.total.toString(), "calls", Modifier.weight(1f))
-            StatTile(fn.flagged.toString(), "flagged", Modifier.weight(1f), highlight = fn.flagged > 0)
-            StatTile(fn.notedCalls.size.toString(), "notes", Modifier.weight(1f))
+            StatTile(g.total.toString(), "calls", Modifier.weight(1f))
+            StatTile(g.flagged.toString(), "flagged", Modifier.weight(1f), highlight = g.flagged > 0)
+            StatTile(
+                (if (g.isBranch) g.numbers.size else g.notedCalls.size).toString(),
+                if (g.isBranch) "numbers" else "notes",
+                Modifier.weight(1f),
+            )
         }
         Spacer(Modifier.height(24.dp))
 
-        // Flagged vs normal pie
-        val normal = (fn.total - fn.flagged).coerceAtLeast(0)
+        val normal = (g.total - g.flagged).coerceAtLeast(0)
         val pie = listOf(
-            Slice("Flagged", fn.flagged, Color(0xFFB00020)),
+            Slice("Flagged", g.flagged, Color(0xFFB00020)),
             Slice("Normal", normal, Color(0xFF1FBFA6)),
         )
         SectionHeader("Flagged vs. normal")
@@ -245,10 +419,9 @@ private fun NumberDetail(fn: FlaggedNumber, onBack: () -> Unit) {
         }
         Spacer(Modifier.height(24.dp))
 
-        // Call types bar
-        val incoming = fn.allCalls.count { it.type == CallLog.Calls.INCOMING_TYPE }
-        val missed = fn.allCalls.count { it.type == CallLog.Calls.MISSED_TYPE }
-        val rejected = fn.allCalls.count { it.type == CallLog.Calls.REJECTED_TYPE }
+        val incoming = g.allCalls.count { it.type == CallLog.Calls.INCOMING_TYPE }
+        val missed = g.allCalls.count { it.type == CallLog.Calls.MISSED_TYPE }
+        val rejected = g.allCalls.count { it.type == CallLog.Calls.REJECTED_TYPE }
         val typeBars = listOf(
             Bar("Incoming", incoming, Color(0xFF185FA5)),
             Bar("Missed", missed, Color(0xFFBA7517)),
@@ -261,29 +434,54 @@ private fun NumberDetail(fn: FlaggedNumber, onBack: () -> Unit) {
             Spacer(Modifier.height(24.dp))
         }
 
-        // Severity
-        if (fn.threatening + fn.spoken + fn.silent > 0) {
+        if (g.threatening + g.spoken + g.silent > 0) {
             SectionHeader("Severity")
             Spacer(Modifier.height(8.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (fn.threatening > 0) { CountBadge(Severity.Threatening, fn.threatening); Spacer(Modifier.width(10.dp)) }
-                if (fn.spoken > 0) { CountBadge(Severity.Spoken, fn.spoken); Spacer(Modifier.width(10.dp)) }
-                if (fn.silent > 0) { CountBadge(Severity.Silent, fn.silent) }
+                if (g.threatening > 0) { CountBadge(Severity.Threatening, g.threatening); Spacer(Modifier.width(10.dp)) }
+                if (g.spoken > 0) { CountBadge(Severity.Spoken, g.spoken); Spacer(Modifier.width(10.dp)) }
+                if (g.silent > 0) { CountBadge(Severity.Silent, g.silent) }
+            }
+            Spacer(Modifier.height(24.dp))
+        }
+
+        if (g.isBranch) {
+            SectionHeader("Numbers in this group")
+            Spacer(Modifier.height(8.dp))
+            CGCard {
+                g.numbers.forEachIndexed { i, n ->
+                    if (i > 0) Spacer(Modifier.height(6.dp))
+                    val calls = g.allCalls.count { it.number == n }
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text(n, fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurface)
+                        Text(
+                            "$calls call${if (calls == 1) "" else "s"}",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+            OutlinedButton(onClick = { confirmUngroup = true }, shape = RoundedCornerShape(10.dp)) {
+                Text("Ungroup these numbers")
             }
             Spacer(Modifier.height(24.dp))
         }
 
         SectionHeader("Seen")
         Spacer(Modifier.height(8.dp))
-        Text("First: ${fmt.format(Date(fn.firstSeen))}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("Last:  ${fmt.format(Date(fn.lastSeen))}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("First: ${fmt.format(Date(g.firstSeen))}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text("Last:  ${fmt.format(Date(g.lastSeen))}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.height(24.dp))
 
-        // Notes
-        if (fn.notedCalls.isNotEmpty()) {
-            SectionHeader("Notes (${fn.notedCalls.size})")
+        if (g.notedCalls.isNotEmpty()) {
+            SectionHeader("Notes (${g.notedCalls.size})")
             Spacer(Modifier.height(4.dp))
-            fn.notedCalls.forEach { call ->
+            g.notedCalls.forEach { call ->
                 Spacer(Modifier.height(8.dp))
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline)
                 Spacer(Modifier.height(8.dp))
@@ -293,6 +491,10 @@ private fun NumberDetail(fn: FlaggedNumber, onBack: () -> Unit) {
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (g.isBranch) {
+                        Spacer(Modifier.width(8.dp))
+                        Text(call.number, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                     if (call.severity != Severity.Unset) {
                         Spacer(Modifier.width(8.dp))
                         SeverityBadge(call.severity)
@@ -304,6 +506,18 @@ private fun NumberDetail(fn: FlaggedNumber, onBack: () -> Unit) {
             }
         }
         Spacer(Modifier.height(16.dp))
+    }
+
+    if (confirmUngroup) {
+        AlertDialog(
+            onDismissRequest = { confirmUngroup = false },
+            title = { Text("Ungroup “${g.label}”?") },
+            text = { Text("The ${g.numbers.size} numbers go back to standing alone. Notes and tags are kept.") },
+            confirmButton = {
+                TextButton(onClick = { confirmUngroup = false; onUngroup() }) { Text("Ungroup") }
+            },
+            dismissButton = { TextButton(onClick = { confirmUngroup = false }) { Text("Cancel") } },
+        )
     }
 }
 

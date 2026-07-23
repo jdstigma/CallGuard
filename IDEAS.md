@@ -14,7 +14,7 @@ Priority-ordered (reordered 2026-07-23). Completed ideas are in the Done section
 | # | Idea | Notes | Status |
 |---|------|-------|--------|
 | 1 | **Flagged Numbers detail + polish** | Tap a number → its own screen with stats + charts + full notes, and a simple back button to the list. Polish the list itself (declutter, clearly tappable cards). | ✅ done |
-| 2 | **Caller-name branches (group spoofed numbers)** | Select multiple numbers and file them under one custom "unknown branch" with a Caller Name tag, so spoofed numbers from the same source read as one identity. Auto-fill the name from contacts when the number is a saved contact. Grouped stats; documents reference the group. | 💡 proposed |
+| 2 | **Caller-name branches (group spoofed numbers)** | Select multiple numbers and file them under one custom "unknown branch" with a Caller Name tag, so spoofed numbers from the same source read as one identity. Auto-fill the name from contacts when the number is a saved contact. Grouped stats; documents reference the group. | ✅ done |
 | 3 | **Editable doc preview** | Preview/edit the filled-in document text before generating the PDF. | 💡 proposed |
 | 4 | **Flag-threshold setting** | The silent-call flag is hardcoded at ≤15s. A Settings control to adjust the threshold. | 💡 proposed |
 | 5 | **State-aware recording-consent flag** | Add a one-party vs all-party consent field to the per-state data so the *57/recording page warns based on the user's state (with a strong "verify" caveat). | 💡 proposed |
@@ -55,6 +55,9 @@ _(moved here when we pick them up)_
   replaced the old *57 PDF document. Recording/transcription is the next step (#11).
 - Documents de-duplicated: differentiated stats per doc (summary = full; FCC =
   period table; police = pie + pointer; carrier = none; packet cover = index only)
+- Docs: flagged-numbers detail capped at top 15 by significance + long-tail summary line
+- Idea #2: Caller-name branches — multi-select Group flow, branch cards + merged
+  detail (member numbers, Ungroup), documents print a branch as one identity
 
 ---
 
