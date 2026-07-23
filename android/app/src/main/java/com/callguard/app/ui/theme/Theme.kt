@@ -1,57 +1,68 @@
 package com.callguard.app.ui.theme
 
-import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
+// Dynamic (Material You) color is intentionally OFF: CallGuard needs a
+// consistent brand identity across every phone, not the device wallpaper's hues.
+
+private val LightColors = lightColorScheme(
+    primary = Navy,
+    onPrimary = Color.White,
+    primaryContainer = NavyMuted,
+    onPrimaryContainer = Color.White,
+    secondary = Teal,
+    onSecondary = TealDeep,
+    secondaryContainer = TealSoft,
+    onSecondaryContainer = TealDeep,
+    tertiary = Teal,
+    background = PageBg,
+    onBackground = Navy,
+    surface = CardBg,
+    onSurface = Navy,
+    surfaceVariant = PageBg,
+    onSurfaceVariant = Slate,
+    error = FlagRed,
+    onError = Color.White,
+    errorContainer = FlagRedSoft,
+    onErrorContainer = FlagRed,
+    outline = HairLine,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
+private val DarkColors = darkColorScheme(
+    primary = Teal,
+    onPrimary = NavyDeep,
+    primaryContainer = NavyMuted,
+    onPrimaryContainer = Color.White,
+    secondary = Teal,
+    onSecondary = NavyDeep,
+    secondaryContainer = NavyMuted,
+    onSecondaryContainer = TealSoft,
+    tertiary = Teal,
+    background = PageBgDark,
+    onBackground = Color(0xFFE6ECF4),
+    surface = CardBgDark,
+    onSurface = Color(0xFFE6ECF4),
+    surfaceVariant = NavySurfaceDark,
+    onSurfaceVariant = SlateLight,
+    error = Color(0xFFFF6B6B),
+    onError = Color.White,
+    errorContainer = Color(0xFF5C1A22),
+    onErrorContainer = Color(0xFFFFDAD6),
+    outline = NavyMuted,
 )
 
 @Composable
 fun CallGuardTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = Typography,
         content = content
     )
