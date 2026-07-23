@@ -23,7 +23,7 @@ object CsvExporter {
     fun export(context: Context, entries: List<CallEntry>): String {
         val fileName = "CallGuard_evidence_${stamp.format(Date())}.csv"
         val csv = buildString {
-            append("Timestamp,Number,ContactName,Type,DurationSeconds,Suspicious,Note\n")
+            append("Timestamp,Number,ContactName,Type,DurationSeconds,Suspicious,Severity,Note\n")
             entries.forEach { e ->
                 append(rowTime.format(Date(e.timestampMillis))).append(',')
                 append(csvCell(e.number)).append(',')
@@ -31,6 +31,7 @@ object CsvExporter {
                 append(e.typeLabel).append(',')
                 append(e.durationSeconds).append(',')
                 append(if (e.isSuspicious) "YES" else "").append(',')
+                append(if (e.severity == Severity.Unset) "" else e.severity.label).append(',')
                 append(csvCell(e.note ?: "")).append('\n')
             }
         }

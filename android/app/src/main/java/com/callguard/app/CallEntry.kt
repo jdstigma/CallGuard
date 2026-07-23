@@ -1,6 +1,23 @@
 package com.callguard.app
 
 /**
+ * How serious a documented call was. Lets the incident timeline show escalation
+ * (a run of Silent calls building to Threatening ones) rather than a flat list.
+ * [Unset] is the default until the user tags a call.
+ */
+enum class Severity(val label: String, val rank: Int) {
+    Unset("Unset", 0),
+    Silent("Silent", 1),
+    Spoken("Spoken", 2),
+    Threatening("Threatening", 3);
+
+    companion object {
+        fun fromName(name: String?): Severity =
+            entries.firstOrNull { it.name == name } ?: Unset
+    }
+}
+
+/**
  * One incoming call as read from the Android system call log.
  *
  * We only read what the OS already recorded — number shown, when, how long it
@@ -15,7 +32,8 @@ data class CallEntry(
     val timestampMillis: Long, // when the call happened (epoch millis)
     val durationSeconds: Long, // connected duration in seconds (0 for missed/rejected)
     val type: Int,             // CallLog.Calls.TYPE (INCOMING, MISSED, REJECTED, ...)
-    val note: String? = null   // your annotation (added later via the DB layer)
+    val note: String? = null,  // your annotation (added later via the DB layer)
+    val severity: Severity = Severity.Unset // how serious this call was, if tagged
 ) {
     val isKnownContact: Boolean get() = !cachedName.isNullOrBlank()
 

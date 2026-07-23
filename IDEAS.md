@@ -11,7 +11,7 @@ When we pick one up, move it to the relevant section and update status.
 
 | # | Idea | Notes | Status |
 |---|------|-------|--------|
-| 1 | **Note severity tagging** | Let each call note be tagged silent / spoken / threatening so the Incident Timeline can visibly show escalation, and stats can count threat-level. Builds on the free-text notes. | 💡 proposed |
+| 1 | **Note severity tagging** | Let each call note be tagged silent / spoken / threatening so the Incident Timeline can visibly show escalation, and stats can count threat-level. Builds on the free-text notes. | ✅ done |
 | 2 | **Evidence packet (one PDF)** | A single "Generate everything" button that bundles all documents into one PDF with a cover/index page. | 💡 proposed |
 | 3 | **State-aware recording-consent flag** | Add a one-party vs all-party consent field to the per-state data so the *57/recording page warns based on the user's state (with a strong "verify" caveat). | 💡 proposed |
 | 4 | **Threat-keyword highlighting** | Auto-highlight words like "threat/kill/hurt/address" in the notes timeline to surface the most serious incidents. Speculative — needs care to avoid false signals. | 💡 proposed |
@@ -40,6 +40,7 @@ _(moved here when we pick them up)_
 - Silent vs aggressive harassment routes + Incident Timeline doc _(in progress)_
 - Title Case document headings _(in progress)_
 - Call Trace (*57) & recording instructions page _(in progress)_
+- Idea #1: Note severity tagging (Silent / Spoken / Threatening) — badges + timeline + CSV
 
 ---
 

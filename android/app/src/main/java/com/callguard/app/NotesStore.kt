@@ -22,4 +22,18 @@ object NotesStore {
             if (note.isBlank()) remove(id.toString()) else putString(id.toString(), note)
         }.apply()
     }
+
+    // Per-call severity tag, stored in the same prefs file under a "sev_" prefix.
+
+    fun getSeverity(context: Context, id: Long): Severity {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        return Severity.fromName(prefs.getString("sev_$id", null))
+    }
+
+    fun setSeverity(context: Context, id: Long, severity: Severity) {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        prefs.edit().apply {
+            if (severity == Severity.Unset) remove("sev_$id") else putString("sev_$id", severity.name)
+        }.apply()
+    }
 }

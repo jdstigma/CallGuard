@@ -18,10 +18,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -31,6 +33,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,7 +70,7 @@ fun CallLogScreen(
             ) { Text("Export CSV") }
         }
         Text(
-            "Tip: tap a call to add a note",
+            "Tip: tap a call to add a note and tag how serious it was",
             fontSize = 12.sp,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 6.dp)
@@ -83,10 +86,11 @@ fun CallLogScreen(
         NoteDialog(
             entry = entry,
             onDismiss = { editing = null },
-            onSave = { text ->
+            onSave = { text, severity ->
                 NotesStore.set(context, entry.id, text)
+                NotesStore.setSeverity(context, entry.id, severity)
                 editing = null
-                onRefresh() // reload so the note shows and rides along in the CSV
+                onRefresh() // reload so the note/tag show and ride along in the exports
             }
         )
     }
@@ -97,23 +101,39 @@ fun CallLogScreen(
 private fun NoteDialog(
     entry: CallEntry,
     onDismiss: () -> Unit,
-    onSave: (String) -> Unit,
+    onSave: (String, Severity) -> Unit,
 ) {
     var text by remember { mutableStateOf(entry.note ?: "") }
+    var severity by remember { mutableStateOf(entry.severity) }
     val who = entry.cachedName?.takeIf { it.isNotBlank() } ?: entry.number
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Note for $who") },
         text = {
-            OutlinedTextField(
-                value = text,
-                onValueChange = { text = it },
-                label = { Text("e.g. silent, hung up after 20s") },
-                minLines = 3,
-                modifier = Modifier.fillMaxWidth()
-            )
+            Column {
+                OutlinedTextField(
+                    value = text,
+                    onValueChange = { text = it },
+                    label = { Text("e.g. silent, hung up after 20s") },
+                    minLines = 3,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(Modifier.height(12.dp))
+                Text("How serious was it?", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(6.dp))
+                Row {
+                    listOf(Severity.Silent, Severity.Spoken, Severity.Threatening).forEach { s ->
+                        FilterChip(
+                            selected = severity == s,
+                            onClick = { severity = if (severity == s) Severity.Unset else s },
+                            label = { Text(s.label) },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
+                }
+            }
         },
-        confirmButton = { TextButton(onClick = { onSave(text) }) { Text("Save") } },
+        confirmButton = { TextButton(onClick = { onSave(text, severity) }) { Text("Save") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
     )
 }
@@ -139,8 +159,12 @@ private fun CallRow(entry: CallEntry, onClick: () -> Unit) {
                 fontWeight = FontWeight.SemiBold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            if (entry.isSuspicious) {
-                Text("⚠ flagged", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SeverityBadge(entry.severity)
+                if (entry.isSuspicious) {
+                    Spacer(Modifier.width(6.dp))
+                    Text("⚠ flagged", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                }
             }
         }
         Text(
@@ -157,5 +181,25 @@ private fun CallRow(entry: CallEntry, onClick: () -> Unit) {
                 modifier = Modifier.padding(top = 2.dp)
             )
         }
+    }
+}
+
+@Composable
+private fun SeverityBadge(severity: Severity) {
+    if (severity == Severity.Unset) return
+    val (bg, fg) = when (severity) {
+        Severity.Silent -> Color(0xFFE7EAF0) to Color(0xFF4A5563)
+        Severity.Spoken -> Color(0xFFFAEEDA) to Color(0xFF854F0B)
+        Severity.Threatening -> Color(0xFFFCEBEB) to Color(0xFFA32D2D)
+        Severity.Unset -> return
+    }
+    Surface(color = bg, shape = RoundedCornerShape(6.dp)) {
+        Text(
+            severity.label,
+            color = fg,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+        )
     }
 }

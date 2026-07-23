@@ -46,6 +46,7 @@ object CallLogRepository {
                     durationSeconds = cursor.getLong(idxDuration),
                     type = cursor.getInt(idxType),
                     note = NotesStore.get(context, id),
+                    severity = NotesStore.getSeverity(context, id),
                 )
             }
         }
