@@ -12,7 +12,7 @@ When we pick one up, move it to the relevant section and update status.
 | # | Idea | Notes | Status |
 |---|------|-------|--------|
 | 1 | **Note severity tagging** | Let each call note be tagged silent / spoken / threatening so the Incident Timeline can visibly show escalation, and stats can count threat-level. Builds on the free-text notes. | ✅ done |
-| 2 | **Evidence packet (one PDF)** | A single "Generate everything" button that bundles all documents into one PDF with a cover/index page. | 💡 proposed |
+| 2 | **Evidence packet (one PDF)** | A single "Generate everything" button that bundles all documents into one PDF with a cover/index page. | ✅ done |
 | 3 | **State-aware recording-consent flag** | Add a one-party vs all-party consent field to the per-state data so the *57/recording page warns based on the user's state (with a strong "verify" caveat). | 💡 proposed |
 | 4 | **Threat-keyword highlighting** | Auto-highlight words like "threat/kill/hurt/address" in the notes timeline to surface the most serious incidents. Speculative — needs care to avoid false signals. | 💡 proposed |
 | 5 | **Flag-threshold setting** | The silent-call flag is hardcoded at ≤15s. A Settings control to adjust the threshold. | 💡 proposed |

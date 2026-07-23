@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -78,38 +79,50 @@ fun DocumentsScreen(
             }
         }
 
-        items(DocumentType.entries) { type ->
-            DocumentCard(
-                type = type,
-                onGenerate = {
-                    val result = DocumentGenerator.generate(context, type, profile, entries)
-                    if (result.uri != null) {
-                        DocumentGenerator.share(context, result.uri)
-                        Toast.makeText(context, "Saved: ${result.path}", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(context, "Could not generate PDF", Toast.LENGTH_LONG).show()
-                    }
-                },
+        fun generate(type: DocumentType) {
+            val result = DocumentGenerator.generate(context, type, profile, entries)
+            if (result.uri != null) {
+                DocumentGenerator.share(context, result.uri)
+                Toast.makeText(context, "Saved: ${result.path}", Toast.LENGTH_LONG).show()
+            } else {
+                Toast.makeText(context, "Could not generate PDF", Toast.LENGTH_LONG).show()
+            }
+        }
+
+        // The bundle comes first and is visually emphasized.
+        item {
+            DocumentCard(DocumentType.EvidencePacket, emphasized = true) { generate(DocumentType.EvidencePacket) }
+            Spacer(Modifier.height(16.dp))
+            Text(
+                "Or generate documents individually",
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(Modifier.height(10.dp))
+        }
+
+        items(DocumentType.entries.filter { it != DocumentType.EvidencePacket }) { type ->
+            DocumentCard(type) { generate(type) }
             Spacer(Modifier.height(12.dp))
         }
     }
 }
 
 @Composable
-private fun DocumentCard(type: DocumentType, onGenerate: () -> Unit) {
+private fun DocumentCard(type: DocumentType, emphasized: Boolean = false, onGenerate: () -> Unit) {
     CGCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(
-                Icons.Filled.PictureAsPdf,
+                if (emphasized) Icons.Filled.Description else Icons.Filled.PictureAsPdf,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.secondary,
+                tint = if (emphasized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondary,
             )
             Spacer(Modifier.width(10.dp))
             Text(
                 type.displayName,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 16.sp,
+                fontSize = if (emphasized) 17.sp else 16.sp,
                 color = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -122,7 +135,7 @@ private fun DocumentCard(type: DocumentType, onGenerate: () -> Unit) {
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
             Button(onClick = onGenerate, shape = RoundedCornerShape(10.dp)) {
-                Text("Generate PDF")
+                Text(if (emphasized) "Generate packet PDF" else "Generate PDF")
             }
         }
     }

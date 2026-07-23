@@ -17,6 +17,11 @@ import java.util.Locale
 
 /** One document the app can produce, filled from the user's info + call stats. */
 enum class DocumentType(val displayName: String, val fileSlug: String, val blurb: String) {
+    EvidencePacket(
+        "Full evidence packet",
+        "evidence_packet",
+        "Bundles every document below into one PDF with a cover page and index — hand this to police or the FCC.",
+    ),
     FccComplaint(
         "FCC complaint",
         "FCC_complaint",
@@ -57,6 +62,7 @@ private sealed interface Block {
     data class Bullet(val text: String) : Block
     data class Table(val headers: List<String>, val rows: List<List<String>>) : Block
     data class Gap(val points: Float) : Block
+    data object PageBreak : Block
 }
 
 object DocumentGenerator {
@@ -183,6 +189,7 @@ object DocumentGenerator {
                     }
                 }
                 is Block.Gap -> { y += block.points }
+                is Block.PageBreak -> { if (y > MARGIN) newPage() }
             }
         }
         pdf.finishPage(page)
@@ -292,12 +299,45 @@ object DocumentGenerator {
         stats: CallStats,
         entries: List<CallEntry>,
     ): List<Block> = when (type) {
+        DocumentType.EvidencePacket -> evidencePacket(profile, stats, entries)
         DocumentType.FccComplaint -> fccComplaint(profile, stats, entries)
         DocumentType.PoliceReport -> policeReport(profile, stats, entries)
         DocumentType.CarrierScript -> carrierScript(profile, stats, entries)
         DocumentType.IncidentTimeline -> incidentTimeline(profile, entries)
         DocumentType.EvidenceSummary -> evidenceSummary(profile, stats, entries)
         DocumentType.CallTraceRecording -> callTraceRecording()
+    }
+
+    /** The documents bundled into the packet, in the order officials should read them. */
+    private val PACKET_CONTENTS = listOf(
+        DocumentType.EvidenceSummary,
+        DocumentType.IncidentTimeline,
+        DocumentType.PoliceReport,
+        DocumentType.FccComplaint,
+        DocumentType.CarrierScript,
+        DocumentType.CallTraceRecording,
+    )
+
+    private fun evidencePacket(profile: UserProfile, stats: CallStats, entries: List<CallEntry>): List<Block> {
+        val (first, last) = dateRange(entries)
+        val blocks = mutableListOf<Block>(
+            Block.Title("CallGuard Evidence Packet"),
+            Block.Body("Prepared by ${v(profile.fullName, "YOUR FULL NAME")} · ${v(profile.phone, "YOUR PHONE")}"),
+            Block.Body("Reporting period: $first to $last"),
+            Block.Body("Generated: ${human.format(Date())}"),
+            Block.Gap(6f),
+            Block.Body("This packet documents a campaign of harassing phone calls and is intended to support a carrier traceback. It contains ${stats.totalCalls} logged calls from ${stats.uniqueNumbers} distinct numbers, ${stats.flaggedCalls} matching the harassment pattern."),
+        )
+        blocks.addAll(statsSection(entries))
+        blocks.add(Block.Heading("Contents"))
+        PACKET_CONTENTS.forEachIndexed { i, t ->
+            blocks.add(Block.Bullet("${i + 1}.  ${t.displayName}"))
+        }
+        PACKET_CONTENTS.forEach { t ->
+            blocks.add(Block.PageBreak)
+            blocks.addAll(buildBlocks(t, profile, stats, entries))
+        }
+        return blocks
     }
 
     private fun fccComplaint(profile: UserProfile, stats: CallStats, entries: List<CallEntry>): List<Block> {
