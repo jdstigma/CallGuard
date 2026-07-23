@@ -48,11 +48,6 @@ enum class DocumentType(val displayName: String, val fileSlug: String, val blurb
         "evidence_summary",
         "One-page snapshot of your call statistics to attach to any filing.",
     ),
-    CallTraceRecording(
-        "Call trace (*57) & recording guide",
-        "call_trace_recording",
-        "How to trace a call with *57 and record audio lawfully for your records.",
-    ),
 }
 
 /** A block of content in a generated document. */
@@ -329,23 +324,6 @@ object DocumentGenerator {
 
     private fun trunc(s: String, n: Int = 28) = if (s.length > n) s.take(n - 1) + "…" else s
 
-    /** A pie (flagged vs normal) + a top-numbers bar chart, shared by the docs. */
-    private fun chartSection(stats: CallStats): List<Block> {
-        if (stats.totalCalls == 0) return emptyList()
-        val blocks = mutableListOf<Block>(
-            Block.Heading("Call Pattern At A Glance"),
-            Block.Pie(stats.flaggedCalls, (stats.totalCalls - stats.flaggedCalls).coerceAtLeast(0)),
-        )
-        val topBars = stats.perNumber.take(6).map { n ->
-            ChartBar(trunc(n.name?.takeIf { it.isNotBlank() } ?: n.number), n.totalCount, n.flaggedCount > 0)
-        }
-        if (topBars.isNotEmpty()) {
-            blocks.add(Block.Heading("Top Numbers"))
-            blocks.add(Block.BarChart(topBars))
-        }
-        return blocks
-    }
-
     /** Per-flagged-number rollup: calls, flagged count, severity tags, notes. */
     private fun flaggedNumberSection(entries: List<CallEntry>): List<Block> {
         val groups = entries.groupBy { it.number }
@@ -402,10 +380,9 @@ object DocumentGenerator {
         DocumentType.EvidencePacket -> evidencePacket(profile, stats, entries)
         DocumentType.FccComplaint -> fccComplaint(profile, stats, entries)
         DocumentType.PoliceReport -> policeReport(profile, stats, entries)
-        DocumentType.CarrierScript -> carrierScript(profile, stats, entries)
+        DocumentType.CarrierScript -> carrierScript(profile, stats)
         DocumentType.IncidentTimeline -> incidentTimeline(profile, entries)
         DocumentType.EvidenceSummary -> evidenceSummary(profile, stats, entries)
-        DocumentType.CallTraceRecording -> callTraceRecording()
     }
 
     /** The documents bundled into the packet, in the order officials should read them. */
@@ -415,7 +392,6 @@ object DocumentGenerator {
         DocumentType.PoliceReport,
         DocumentType.FccComplaint,
         DocumentType.CarrierScript,
-        DocumentType.CallTraceRecording,
     )
 
     private fun evidencePacket(profile: UserProfile, stats: CallStats, entries: List<CallEntry>): List<Block> {
@@ -426,11 +402,8 @@ object DocumentGenerator {
             Block.Body("Reporting period: $first to $last"),
             Block.Body("Generated: ${human.format(Date())}"),
             Block.Gap(6f),
-            Block.Body("This packet documents a campaign of harassing phone calls and is intended to support a carrier traceback. It contains ${stats.totalCalls} logged calls from ${stats.uniqueNumbers} distinct numbers, ${stats.flaggedCalls} matching the harassment pattern."),
+            Block.Body("This packet documents a campaign of harassing phone calls and is intended to support a carrier traceback. It contains ${stats.totalCalls} logged calls from ${stats.uniqueNumbers} distinct numbers, ${stats.flaggedCalls} matching the harassment pattern. The full statistics and charts are on the evidence summary that follows."),
         )
-        blocks.addAll(statsSection(entries))
-        blocks.add(Block.Heading("Flagged Vs Normal"))
-        blocks.add(Block.Pie(stats.flaggedCalls, (stats.totalCalls - stats.flaggedCalls).coerceAtLeast(0)))
         blocks.add(Block.Heading("Contents"))
         PACKET_CONTENTS.forEachIndexed { i, t ->
             blocks.add(Block.Bullet("${i + 1}.  ${t.displayName}"))
@@ -459,8 +432,15 @@ object DocumentGenerator {
             Block.Bullet("Date(s) of calls: $first through $last"),
             Block.Bullet("Method: Phone call"),
         )
-        blocks.addAll(statsSection(entries))
-        blocks.addAll(chartSection(stats))
+        blocks.add(Block.Heading("Totals By Period"))
+        blocks.add(
+            Block.Table(
+                listOf("Window", "Calls", "Flagged", "Numbers"),
+                CallStats.extras(entries).windows.map {
+                    listOf(it.label, it.total.toString(), it.flagged.toString(), it.uniqueNumbers.toString())
+                },
+            )
+        )
         blocks.add(Block.Heading("Description (Paste This)"))
         blocks.add(Block.Body("I am receiving a sustained campaign of harassing phone calls to my cell phone, $phone. Over the period $first to $last I have logged ${stats.totalCalls} calls from ${stats.uniqueNumbers} distinct phone numbers. ${patternSentence(profile, stats)}"))
         blocks.add(Block.Body("I did not consent to these calls. I am requesting FCC action against this illegal spoofing under the Truth in Caller ID Act and the TRACED Act."))
@@ -493,8 +473,9 @@ object DocumentGenerator {
             Block.Heading("Summary Of Evidence"),
             Block.Body("Over the period $first to $last I have logged ${stats.totalCalls} calls from ${stats.uniqueNumbers} distinct phone numbers. ${patternSentence(profile, stats)}"),
         )
-        blocks.addAll(statsSection(entries))
-        blocks.addAll(chartSection(stats))
+        blocks.add(Block.Heading("Flagged Vs Normal"))
+        blocks.add(Block.Pie(stats.flaggedCalls, (stats.totalCalls - stats.flaggedCalls).coerceAtLeast(0)))
+        blocks.add(Block.Body("Full call statistics, the time-window breakdown, charts, and a per-number list are in the attached CallGuard evidence summary."))
         if (profile.harassmentType.includesAggressive) {
             blocks.add(Block.Body("Specific threatening/abusive incidents are itemized in the attached CallGuard incident timeline, compiled from notes taken at the time of each call."))
         }
@@ -508,7 +489,7 @@ object DocumentGenerator {
         return blocks
     }
 
-    private fun carrierScript(profile: UserProfile, stats: CallStats, entries: List<CallEntry>): List<Block> {
+    private fun carrierScript(profile: UserProfile, stats: CallStats): List<Block> {
         val blocks = mutableListOf<Block>(
             Block.Title("Carrier Harassment Case — Call Script"),
             Block.Body("Call your carrier's fraud / harassment department (dial 611 from your phone, or use the customer-service number on your bill) and ask to open a documented harassment case."),
@@ -525,8 +506,6 @@ object DocumentGenerator {
             Block.Heading("Context To Give Them"),
             Block.Body("I have logged ${stats.totalCalls} calls from ${stats.uniqueNumbers} different numbers, ${stats.flaggedCalls} matching the harassment pattern. I am also filing an FCC complaint and a police report."),
         )
-        blocks.addAll(statsSection(entries))
-        blocks.addAll(chartSection(stats))
         blocks.add(Block.Gap(6f))
         blocks.add(Block.Body("Note: carrier tools block and document — they cannot reveal a spoofed caller to you directly. Only a police subpoena unmasks the origin."))
         blocks.add(Block.Gap(6f))
@@ -597,10 +576,7 @@ object DocumentGenerator {
         blocks.add(Block.Pie(stats.flaggedCalls, (stats.totalCalls - stats.flaggedCalls).coerceAtLeast(0)))
         blocks.add(Block.Heading("Top Numbers By Call Count"))
         val topBars = stats.perNumber.take(6).map { n ->
-            val label = (n.name?.takeIf { it.isNotBlank() } ?: n.number).let {
-                if (it.length > 28) it.take(27) + "…" else it
-            }
-            ChartBar(label, n.totalCount, n.flaggedCount > 0)
+            ChartBar(trunc(n.name?.takeIf { it.isNotBlank() } ?: n.number), n.totalCount, n.flaggedCount > 0)
         }
         if (topBars.isNotEmpty()) blocks.add(Block.BarChart(topBars))
         stats.perNumber.take(10).forEach { n ->
@@ -614,21 +590,4 @@ object DocumentGenerator {
         return blocks
     }
 
-    private fun callTraceRecording(): List<Block> = listOf(
-        Block.Title("Call Trace (*57) And Recording For Records"),
-        Block.Heading("Trace The Call: *57"),
-        Block.Body("Immediately after a harassing call ends — before any other call comes in — dial *57 and press call. You will hear a confirmation tone or message. This tells your carrier to log the true originating line for that specific call, in a form law enforcement can subpoena. You will not see the result yourself; by design it goes to the carrier and police."),
-        Block.Body("Notes: *57 usually carries a small per-use fee and must be done right after each call. It is most reliable on landlines; on wireless it may not be supported, in which case the police-report-to-subpoena route is what actually unmasks the caller."),
-        Block.Bullet("*57 log — date/time of traced call: ____________________"),
-        Block.Bullet("*57 log — date/time of traced call: ____________________"),
-        Block.Bullet("*57 log — date/time of traced call: ____________________"),
-        Block.Heading("Recording Calls For Your Records"),
-        Block.Body("A recording of a threatening or abusive call can be powerful evidence — but call-recording law varies by state, and this matters legally:"),
-        Block.Bullet("Some states allow recording if only ONE party (you) consents."),
-        Block.Bullet("Other states require ALL parties on the call to consent. Recording without that consent can itself be a crime."),
-        Block.Body("Before you record any call, confirm your own state's law — search \"[your state] call recording consent law\" or ask an attorney. Do not assume it is legal. If your state requires all-party consent and you cannot obtain it, rely on the call log, your written notes, and *57 instead."),
-        Block.Body("If recording is lawful for you: use your phone's built-in call recording if available, or a separate recorder; save each file labeled with the date and time; never edit the audio; and keep copies in more than one place."),
-        Block.Gap(10f),
-        Block.Body("This page is general information, not legal advice. Generated by CallGuard on ${human.format(Date())}."),
-    )
 }

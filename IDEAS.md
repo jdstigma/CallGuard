@@ -23,6 +23,7 @@ Priority-ordered (reordered 2026-07-23). Completed ideas are in the Done section
 | 8 | **Richer Learn / start-here flow** | A guided step-by-step "start here" path and an FAQ in the Learn section. | 💡 proposed |
 | 9 | **Active call monitoring / alerts** | From the original "call monitor" vision: today it's passive (manual refresh). Add a notification when a new flagged/suspicious call is detected. Needs a background receiver — scope carefully vs. Play Store call-log policy. | 💡 proposed (from initial prompt) |
 | 10 | **Dark-mode polish pass** | Review every screen in dark mode for contrast/spacing. | 💡 proposed |
+| 11 | **Call recording (speakerphone) + transcribe** | Step 2 of the *57 work: on speakerphone, play a "recording in progress" announcement, record the mic to an audio file (saved as evidence), best-effort live transcription into a note, with a state-consent warning. Adds RECORD_AUDIO. Note: Android blocks earpiece/telephony call audio for app-store apps — speakerphone acoustic capture is the only route, and full-call transcription is best-effort. | 💡 proposed (next step of *57) |
 
 ---
 
@@ -50,6 +51,10 @@ _(moved here when we pick them up)_
   evidence doc; severity bar in the timeline (all except the *57 how-to page)
 - Idea #1 (reprioritized): Flagged Numbers detail view (tap → per-number stats,
   charts, notes, back button) + polished tappable list cards
+- *57: one-tap "Call *57" button + trace log (new Call trace screen, CALL_PHONE);
+  replaced the old *57 PDF document. Recording/transcription is the next step (#11).
+- Documents de-duplicated: differentiated stats per doc (summary = full; FCC =
+  period table; police = pie + pointer; carrier = none; packet cover = index only)
 
 ---
 

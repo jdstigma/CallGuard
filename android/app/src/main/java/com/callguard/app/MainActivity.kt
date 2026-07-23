@@ -138,6 +138,7 @@ fun CallGuardApp() {
                     })
                     Screen.Analysis -> AnalysisScreen(entries)
                     Screen.FlaggedNumbers -> FlaggedNumbersScreen(entries)
+                    Screen.CallTrace -> CallTraceScreen()
                     Screen.Documents -> DocumentsScreen(entries, profile, onEditInfo = { go(Screen.MyInfo) })
                     Screen.Learn -> LearnScreen()
                     Screen.StateHelp -> StateResourcesScreen(profile)
