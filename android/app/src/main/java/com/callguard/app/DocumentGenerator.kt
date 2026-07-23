@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.graphics.Color as AColor
@@ -61,9 +62,14 @@ private sealed interface Block {
     data class Body(val text: String) : Block
     data class Bullet(val text: String) : Block
     data class Table(val headers: List<String>, val rows: List<List<String>>) : Block
+    data class Pie(val flagged: Int, val normal: Int) : Block
+    data class BarChart(val bars: List<ChartBar>) : Block
     data class Gap(val points: Float) : Block
     data object PageBreak : Block
 }
+
+/** One bar in a document chart. [highlight] draws it red (a flagged number). */
+private data class ChartBar(val label: String, val value: Int, val highlight: Boolean)
 
 object DocumentGenerator {
 
@@ -127,6 +133,10 @@ object DocumentGenerator {
             strokeWidth = 0.7f
             isAntiAlias = true
         }
+        val fillRed = fill(AColor.rgb(0xB0, 0x00, 0x20))
+        val fillTeal = fill(AColor.rgb(0x1F, 0xBF, 0xA6))
+        val fillBlue = fill(AColor.rgb(0x18, 0x5F, 0xA5))
+        val fillTrack = fill(AColor.rgb(0xEC, 0xEF, 0xF3))
         val contentWidth = PAGE_W - MARGIN * 2
 
         var pageNum = 1
@@ -188,6 +198,35 @@ object DocumentGenerator {
                         }
                     }
                 }
+                is Block.Pie -> {
+                    val total = (block.flagged + block.normal).coerceAtLeast(1)
+                    val d = 120f
+                    ensure(d + 12f)
+                    val rect = RectF(MARGIN, y, MARGIN + d, y + d)
+                    val flaggedSweep = 360f * block.flagged / total
+                    canvas.drawArc(rect, -90f, flaggedSweep, true, fillRed)
+                    canvas.drawArc(rect, -90f + flaggedSweep, 360f - flaggedSweep, true, fillTeal)
+                    val lx = MARGIN + d + 28f
+                    var ly = y + 26f
+                    canvas.drawRect(lx, ly, lx + 12f, ly + 12f, fillRed)
+                    canvas.drawText("Flagged: ${block.flagged}", lx + 20f, ly + 11f, body)
+                    ly += 26f
+                    canvas.drawRect(lx, ly, lx + 12f, ly + 12f, fillTeal)
+                    canvas.drawText("Normal: ${block.normal}", lx + 20f, ly + 11f, body)
+                    y += d + 12f
+                }
+                is Block.BarChart -> {
+                    val max = (block.bars.maxOfOrNull { it.value } ?: 1).coerceAtLeast(1)
+                    block.bars.forEach { b ->
+                        ensure(30f)
+                        canvas.drawText("${b.label} — ${b.value}", MARGIN, y + body.textSize, body)
+                        y += 15f
+                        canvas.drawRect(MARGIN, y, MARGIN + contentWidth, y + 8f, fillTrack)
+                        val w = contentWidth * b.value / max
+                        canvas.drawRect(MARGIN, y, MARGIN + w, y + 8f, if (b.highlight) fillRed else fillBlue)
+                        y += 15f
+                    }
+                }
                 is Block.Gap -> { y += block.points }
                 is Block.PageBreak -> { if (y > MARGIN) newPage() }
             }
@@ -224,6 +263,12 @@ object DocumentGenerator {
         isLinearText = true
         fontFeatureSettings = "liga off, clig off"
         typeface = if (bold) Typeface.create(Typeface.DEFAULT, Typeface.BOLD) else Typeface.DEFAULT
+    }
+
+    private fun fill(color: Int) = Paint().apply {
+        this.color = color
+        isAntiAlias = true
+        style = Paint.Style.FILL
     }
 
     /** Capitalize each word for document titles/headings; preserve acronyms and *57. */
@@ -518,7 +563,16 @@ object DocumentGenerator {
         blocks.add(Block.Bullet("Flagged (harassment pattern): ${stats.flaggedCalls}"))
         blocks.add(Block.Bullet("Distinct numbers: ${stats.uniqueNumbers}"))
         blocks.add(Block.Bullet("Incoming: ${stats.incoming} · Missed: ${stats.missed} · Rejected: ${stats.rejected}"))
+        blocks.add(Block.Heading("Flagged Vs Normal"))
+        blocks.add(Block.Pie(stats.flaggedCalls, (stats.totalCalls - stats.flaggedCalls).coerceAtLeast(0)))
         blocks.add(Block.Heading("Top Numbers By Call Count"))
+        val topBars = stats.perNumber.take(6).map { n ->
+            val label = (n.name?.takeIf { it.isNotBlank() } ?: n.number).let {
+                if (it.length > 28) it.take(27) + "…" else it
+            }
+            ChartBar(label, n.totalCount, n.flaggedCount > 0)
+        }
+        if (topBars.isNotEmpty()) blocks.add(Block.BarChart(topBars))
         stats.perNumber.take(10).forEach { n ->
             val nm = n.name?.takeIf { it.isNotBlank() } ?: n.number
             val flag = if (n.flaggedCount > 0) " — ${n.flaggedCount} flagged" else ""
